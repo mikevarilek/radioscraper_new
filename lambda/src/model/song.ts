@@ -16,10 +16,15 @@ export class Song {
     album?: string;
 
     toSearchString(): string {
+      var artist = this.artist;
+      if (artist.includes("/")) {
+        artist = artist.split("/")[0];
+      }
+
       if (this.album === undefined ||
           this.album === "undefined") {
-            return "artist:" + this.artist + " track:" + this.title;
+            return "artist:" + artist + " track:" + this.title;
       }
-      return "artist:" + this.artist + " track:" + this.title + " album:" + this.album;
+      return "artist:" + artist + " track:" + this.title + " album:" + this.album;
     }
 }
