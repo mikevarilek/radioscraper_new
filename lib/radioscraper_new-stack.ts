@@ -19,8 +19,8 @@ export class RadioscraperNewStack extends cdk.Stack {
     });
 
     const scrapeFunction = new NodejsFunction(this, 'scrapeAltNation', {
-      memorySize: 512,
-      timeout: cdk.Duration.seconds(30),
+      memorySize: 256,
+      timeout: cdk.Duration.seconds(5),
       runtime: lambda.Runtime.NODEJS_14_X,
       handler: 'handler',
       entry: path.join(__dirname, `/../lambda/src/index.ts`),
