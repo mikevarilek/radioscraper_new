@@ -21,7 +21,17 @@
     "typescript": "~3.9.7"
   },
   "dependencies": {
+    "@aws-cdk/aws-dynamodb": "^1.132.0",
+    "@aws-cdk/aws-events-targets": "^1.132.0",
+    "@aws-cdk/aws-lambda": "^1.132.0",
+    "@aws-cdk/aws-lambda-nodejs": "^1.132.0",
     "@aws-cdk/core": "1.132.0",
-    "source-map-support": "^0.5.16"
+    "@aws/dynamodb-data-mapper": "^0.7.3",
+    "@aws/dynamodb-data-mapper-annotations": "^0.7.3",
+    "@types/aws-lambda": "^8.10.85",
+    "aws-sdk": "^2.1028.0",
+    "node-libcurl": "^2.3.3",
+    "source-map-support": "^0.5.16",
+    "spotify-web-api-js": "^1.5.2"
   }
 }
