@@ -6,7 +6,6 @@ import * as ddb from '@aws-cdk/aws-dynamodb'
 import * as iam from '@aws-cdk/aws-iam';
 import * as cdk from '@aws-cdk/core';
 import * as path from 'path';
-import { Construct } from '@aws-cdk/core'
 
 export class RadioscraperNewStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -24,11 +23,12 @@ export class RadioscraperNewStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
       runtime: lambda.Runtime.NODEJS_14_X,
       handler: 'handler',
-      entry: path.join(__dirname, `/../lambda/src/index.ts`)
+      entry: path.join(__dirname, `/../lambda/src/index.ts`),
+      functionName: "RadioscraperNew-scrapeAltNation",
     });
 
     const eventRule = new events.Rule(this, 'scheduleRule', {
-      schedule: events.Schedule.cron({ minute: '2' }),
+      schedule: events.Schedule.rate(cdk.Duration.minutes(2)),
     });
 
     eventRule.addTarget(new targets.LambdaFunction(scrapeFunction));
