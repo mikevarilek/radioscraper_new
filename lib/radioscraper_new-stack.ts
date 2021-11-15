@@ -22,7 +22,7 @@ export class RadioscraperNewStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
       runtime: lambda.Runtime.NODEJS_14_X,
       handler: 'handler',
-      entry: path.join(__dirname, `/../lambda/src/index.ts`),
+      entry: path.join(__dirname, `/../lambda/src/index.ts`)
     });
 
     const eventRule = new events.Rule(this, 'scheduleRule', {
