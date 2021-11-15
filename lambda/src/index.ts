@@ -6,7 +6,6 @@ import { Secrets } from './secrets'
 var SpotifyWebApi = require('spotify-web-api-node')
 
 export const handler: ScheduledHandler = async () => {
-    console.info("Starting Lambda");
 
     var spotifyApi = new SpotifyWebApi({
         clientId: Secrets.SPOTIFY_CLIENT_ID,
@@ -14,12 +13,9 @@ export const handler: ScheduledHandler = async () => {
         redirectUri: 'http://localhost:3000/',
     });
 
+    // Likely unnecessary, remove later
     await spotifyApi.clientCredentialsGrant().then(
         function(data: { body: { [x: string]: any } }) {
-          console.log('The access token expires in ' + data.body['expires_in']);
-          console.log('The access token is ' + data.body['access_token']);
-      
-          // Save the access token so that it's used in future calls
           spotifyApi.setAccessToken(data.body['access_token']);
         },
         function(err: any) {
@@ -42,13 +38,8 @@ export const handler: ScheduledHandler = async () => {
     // Requires manually getting a code and putting it in DDB, use link in secrets.ts
     if (refresh_token.album === "empty") {
         access_token = await mapper.get(access_token);
-        console.info("Attempting to authorize with: " + access_token.album);
         await spotifyApi.authorizationCodeGrant(access_token.album).then(
             function(data: { body: { [x: string]: any } }) {
-                console.log('The token expires in ' + data.body['expires_in']);
-                console.log('The access token is ' + data.body['access_token']);
-                console.log('The refresh token is ' + data.body['refresh_token']);
-                console.info("authorizationCodeGrant response: " + JSON.stringify(data));
                 spotifyApi.setAccessToken(data.body['access_token']);
                 access_token.album = data.body['access_token'];
                 spotifyApi.setRefreshToken(data.body['refresh_token']);
@@ -67,8 +58,6 @@ export const handler: ScheduledHandler = async () => {
 
     await spotifyApi.refreshAccessToken().then(
         function(data: { body: { [x: string]: any } }) {
-            console.log('The refreshed access token is ' + data.body['access_token']);
-            console.info("refreshAccessToken response: " + JSON.stringify(data));
             spotifyApi.setAccessToken(data.body['access_token']);
         },
         function(err: string | undefined) {
@@ -79,11 +68,9 @@ export const handler: ScheduledHandler = async () => {
 
     let axios = new Axios({});
 
-    console.info("Curling siriusXM");
     let resp = await axios.get("https://www.siriusxm.com/servlet/Satellite?d=&pagename=SXM%2FServices%2FMountainWrapper&desktop=yes&channels=altnation");
     console.info("siriusXM status code " + resp.status);
     let response = JSON.parse(resp.data.toString());
-    console.info("response: " + JSON.stringify(response));
     if (response?.channels?.altnation?.content?.type && 
         response.channels.altnation.content.type === "Song") {
         let song = new Song();
@@ -98,15 +85,12 @@ export const handler: ScheduledHandler = async () => {
                 console.error(error);
                 throw error;
             }
-
-            console.info("Song not already in DDB, search Spotify");
             // Retrieve and add to spotify before writing to DDB
             console.info("Searching Song: " + song.toSearchString());
 
             await spotifyApi.searchTracks(song.toSearchString()).then(async function (response : Object) {
                 // Dumb little thing to allow for untyped Object
                 let responseString = JSON.stringify(response);
-                console.info("Spotify responseString: " + responseString);
                 let responseObject = JSON.parse(responseString);
                 if(responseObject.statusCode != 200) {
                     console.error("Status Code: " + responseObject.statusCode);
@@ -148,8 +132,13 @@ export const handler: ScheduledHandler = async () => {
             })
         })
     } else {
-        console.warn("Non song or invalid response: " + resp.data.toString());
-        throw new Error("Not a song or an invalid response.");
+        if (response?.channels?.altnation?.content?.artists && 
+            response.channels.altnation.content.artists[0].name === "alt nation") {
+            // No song
+            console.info("Non song response");
+        } else {
+            console.warn("Non song or invalid response: " + resp.data.toString());
+            throw new Error("Not a song or an invalid response.");
+        }
     }
-    console.info("Ending Lambda");
 }
