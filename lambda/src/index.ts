@@ -38,6 +38,8 @@ export const handler: ScheduledHandler = async () => {
 
     refresh_token = await mapper.get(refresh_token);
 
+    // Only used if the refresh_token is no longer authorized
+    // Requires manually getting a code and putting it in DDB, use link in secrets.ts
     if (refresh_token.album === "empty") {
         access_token = await mapper.get(access_token);
         console.info("Attempting to authorize with: " + access_token.album);
