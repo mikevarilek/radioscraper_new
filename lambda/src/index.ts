@@ -36,10 +36,10 @@ export const handler: ScheduledHandler = async () => {
     refresh_token.artist = "refresh_token";
     refresh_token.title = "refresh_token";
 
-    access_token = await mapper.get(access_token);
     refresh_token = await mapper.get(refresh_token);
 
     if (refresh_token.album === "empty") {
+        access_token = await mapper.get(access_token);
         console.info("Attempting to authorize with: " + access_token.album);
         await spotifyApi.authorizationCodeGrant(access_token.album).then(
             function(data: { body: { [x: string]: any } }) {
@@ -57,8 +57,9 @@ export const handler: ScheduledHandler = async () => {
                 throw new Error(err);
             }
         );
+        await mapper.put(access_token);
+        await mapper.put(refresh_token);
     } else {
-        spotifyApi.setAccessToken(access_token.album);
         spotifyApi.setRefreshToken(refresh_token.album);
     }
 
@@ -67,16 +68,12 @@ export const handler: ScheduledHandler = async () => {
             console.log('The refreshed access token is ' + data.body['access_token']);
             console.info("refreshAccessToken response: " + JSON.stringify(data));
             spotifyApi.setAccessToken(data.body['access_token']);
-            access_token.album = data.body['access_token'];
         },
         function(err: string | undefined) {
             console.error(err);
             throw new Error(err);
         }
     )
-
-    await mapper.put(access_token);
-    await mapper.put(refresh_token);
 
     let axios = new Axios({});
 
