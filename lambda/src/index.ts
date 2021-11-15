@@ -28,33 +28,46 @@ export const handler: ScheduledHandler = async () => {
         }
       );
 
-    let creds = new Song();
-    creds.artist = "access_token";
-    creds.title = "access_token";
+    let access_token = new Song();
+    access_token.artist = "access_token";
+    access_token.title = "access_token";
 
-    creds = await mapper.get(creds);
+    let refresh_token = new Song();
+    refresh_token.artist = "refresh_token";
+    refresh_token.title = "refresh_token";
 
-    console.info("Attempting to authorize with: " + creds.album);
+    access_token = await mapper.get(access_token);
+    refresh_token = await mapper.get(refresh_token);
 
-    await spotifyApi.authorizationCodeGrant(creds.album).then(
-        function(data: { body: { [x: string]: any } }) {
-            console.log('The token expires in ' + data.body['expires_in']);
-            console.log('The access token is ' + data.body['access_token']);
-            console.log('The refresh token is ' + data.body['refresh_token']);
-            spotifyApi.setAccessToken(data.body['access_token']);
-            spotifyApi.setRefreshToken(data.body['refresh_token']);
-        },
-        function(err: string | undefined) {
-            console.error(err);
-            throw new Error(err);
-        }
-    );
+    if (refresh_token.album === "empty") {
+        console.info("Attempting to authorize with: " + access_token.album);
+        await spotifyApi.authorizationCodeGrant(access_token.album).then(
+            function(data: { body: { [x: string]: any } }) {
+                console.log('The token expires in ' + data.body['expires_in']);
+                console.log('The access token is ' + data.body['access_token']);
+                console.log('The refresh token is ' + data.body['refresh_token']);
+                console.info("authorizationCodeGrant response: " + JSON.stringify(data));
+                spotifyApi.setAccessToken(data.body['access_token']);
+                access_token.album = data.body['access_token'];
+                spotifyApi.setRefreshToken(data.body['refresh_token']);
+                refresh_token.album = data.body['refresh_token'];
+            },
+            function(err: string | undefined) {
+                console.error(err);
+                throw new Error(err);
+            }
+        );
+    } else {
+        spotifyApi.setAccessToken(access_token.album);
+        spotifyApi.setRefreshToken(refresh_token.album);
+    }
 
     await spotifyApi.refreshAccessToken().then(
         function(data: { body: { [x: string]: any } }) {
             console.log('The refreshed access token is ' + data.body['access_token']);
-            creds.album = data.body['access_token'];
+            console.info("refreshAccessToken response: " + JSON.stringify(data));
             spotifyApi.setAccessToken(data.body['access_token']);
+            access_token.album = data.body['access_token'];
         },
         function(err: string | undefined) {
             console.error(err);
@@ -62,7 +75,8 @@ export const handler: ScheduledHandler = async () => {
         }
     )
 
-    await mapper.put(creds);
+    await mapper.put(access_token);
+    await mapper.put(refresh_token);
 
     let axios = new Axios({});
 
