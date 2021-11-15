@@ -30,6 +30,7 @@
     "@aws/dynamodb-data-mapper-annotations": "^0.7.3",
     "@types/aws-lambda": "^8.10.85",
     "aws-sdk": "^2.1028.0",
+    "axios": "^0.24.0",
     "source-map-support": "^0.5.16",
     "spotify-web-api-js": "^1.5.2"
   }

@@ -6,6 +6,7 @@ import * as ddb from '@aws-cdk/aws-dynamodb'
 import * as iam from '@aws-cdk/aws-iam';
 import * as cdk from '@aws-cdk/core';
 import * as path from 'path';
+import { Construct } from '@aws-cdk/core'
 
 export class RadioscraperNewStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -14,6 +15,7 @@ export class RadioscraperNewStack extends cdk.Stack {
     const table = new ddb.Table(this, 'rs-altnation-songs', {
       partitionKey: { name: 'artist', type: ddb.AttributeType.STRING },
       sortKey: { name: 'title', type: ddb.AttributeType.STRING },
+      tableName: 'rs-altnation-songs',
       billingMode: ddb.BillingMode.PAY_PER_REQUEST,
     });
 

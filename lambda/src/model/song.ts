@@ -4,14 +4,15 @@ import {
     rangeKey,
     table
   } from "@aws/dynamodb-data-mapper-annotations";
+import { type } from "os";
 
-  @table("rs-altnation-songs")
+@table("rs-altnation-songs")
 export class Song {
-    @hashKey()
-    artist?: string;
-    @rangeKey()
-    title?: string;
-    @attribute()
+    @hashKey({ type: "String" })
+    artist: string;
+    @rangeKey({ type: "String" })
+    title: string;
+    @attribute({ type: "String" })
     album?: string;
 
     toSearchString(): string {
