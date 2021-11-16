@@ -122,7 +122,7 @@ export const handler: ScheduledHandler = async () => {
                 } else {
                     console.error("Spotify searchTracks no results.");
                     console.error(JSON.stringify(data));
-                    throw new Error("Spotify searchTracks no results.");
+                    throw new Error("Spotify searchTracks no results. Query: " + song.toSearchString());
                 }
             },
             function (err: string | undefined) {
