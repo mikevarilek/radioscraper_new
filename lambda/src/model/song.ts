@@ -4,8 +4,6 @@ import {
     rangeKey,
     table
   } from "@aws/dynamodb-data-mapper-annotations";
-import { type } from "os";
-
 @table("rs-altnation-songs")
 export class Song {
     @hashKey({ type: "String" })

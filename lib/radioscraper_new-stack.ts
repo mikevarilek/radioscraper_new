@@ -1,14 +1,15 @@
-import * as lambda from '@aws-cdk/aws-lambda'
-import {NodejsFunction} from '@aws-cdk/aws-lambda-nodejs'
-import * as targets from '@aws-cdk/aws-events-targets'
-import * as events from '@aws-cdk/aws-events'
-import * as ddb from '@aws-cdk/aws-dynamodb'
-import * as iam from '@aws-cdk/aws-iam';
-import * as cdk from '@aws-cdk/core';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as ddb from 'aws-cdk-lib/aws-dynamodb';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cdk from 'aws-cdk-lib';
+import { Construct } from 'constructs';
 import * as path from 'path';
 
 export class RadioscraperNewStack extends cdk.Stack {
-  constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     const table = new ddb.Table(this, 'rs-altnation-songs', {
@@ -21,7 +22,7 @@ export class RadioscraperNewStack extends cdk.Stack {
     const scrapeFunction = new NodejsFunction(this, 'scrapeAltNation', {
       memorySize: 256,
       timeout: cdk.Duration.seconds(5),
-      runtime: lambda.Runtime.NODEJS_14_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'handler',
       entry: path.join(__dirname, `/../lambda/src/index.ts`),
       functionName: "RadioscraperNew-scrapeAltNation",
@@ -49,6 +50,8 @@ export class RadioscraperNewStack extends cdk.Stack {
         statements: [readWriteSongsTablePolicy],
       }),
     );
-    
+
+    // suppress unused variable warning — table is created for its side effect
+    void table;
   }
 }
