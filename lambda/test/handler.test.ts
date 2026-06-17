@@ -100,7 +100,7 @@ let mockSpotify: {
 let mockAxiosGet: jest.Mock;
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.resetAllMocks();
 
   // Set up a fresh spotify instance returned by the constructor.
   mockSpotify = {
@@ -353,6 +353,33 @@ describe('handler – new song (not yet in DDB)', () => {
 
     await expect(invoke()).rejects.toThrow();
     expect(mockMapper.put).not.toHaveBeenCalled();
+  });
+});
+
+describe('handler – remaster filtering', () => {
+  const remasterTitles = [
+    'Mr. Brightside (2004 Remaster)',
+    'Some Song - Remastered 2011',
+    'Track Name [REMASTER]',
+    'Song (remaster)',
+  ];
+
+  remasterTitles.forEach(title => {
+    it(`never calls Spotify or DDB put for "${title}"`, async () => {
+      // Provide mock values for both possible mapper.get calls so the test
+      // does not depend on whether the early-return fires before the second call.
+      setupMapper({ songAlreadyExists: true });
+      mockAxiosGet.mockResolvedValue({
+        status: 200,
+        data: siriusXMSongResponse('Some Artist', title, 'Some Album'),
+      });
+
+      await invoke();
+
+      expect(mockSpotify.searchTracks).not.toHaveBeenCalled();
+      expect(mockSpotify.addTracksToPlaylist).not.toHaveBeenCalled();
+      expect(mockMapper.put).not.toHaveBeenCalled();
+    });
   });
 });
 

@@ -26,6 +26,9 @@ export class RadioscraperNewStack extends cdk.Stack {
       handler: 'handler',
       entry: path.join(__dirname, `/../lambda/src/index.ts`),
       functionName: "RadioscraperNew-scrapeAltNation",
+      environment: {
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
+      },
     });
 
     const eventRule = new events.Rule(this, 'scheduleRule', {

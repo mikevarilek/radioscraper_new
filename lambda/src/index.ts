@@ -57,8 +57,15 @@ export const handler: ScheduledHandler = async () => {
     }
 
     await spotifyApi.refreshAccessToken().then(
-        function(data: { body: { [x: string]: any } }) {
+        async function(data: { body: { [x: string]: any } }) {
             spotifyApi.setAccessToken(data.body['access_token']);
+            const newRefreshToken = data.body['refresh_token'];
+            if (newRefreshToken && newRefreshToken !== refresh_token.album) {
+                refresh_token.album = newRefreshToken;
+                spotifyApi.setRefreshToken(newRefreshToken);
+                await mapper.put(refresh_token);
+                console.info("Spotify refresh token rotated — updated in DDB");
+            }
         },
         function(err: string | undefined) {
             console.error(err);
@@ -77,6 +84,11 @@ export const handler: ScheduledHandler = async () => {
         song.artist = response.channels.altnation.content.artists[0].name;
         song.title = response.channels.altnation.content.title;
         song.album = response.channels.altnation.content.album.title;
+
+        if (song.title.toLowerCase().includes('remaster')) {
+            console.info("Skipping remaster: " + song.title);
+            return;
+        }
 
         await mapper.get(song).then((alreadyExists: Song) => {
             console.info("Song already in DDB: " + JSON.stringify(alreadyExists));
