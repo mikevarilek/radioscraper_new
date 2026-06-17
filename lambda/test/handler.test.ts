@@ -76,8 +76,9 @@ function makeSpotifyTrack(
   name: string,
   explicit: boolean,
   artists: Array<{ name: string }>,
+  releaseDate = '2024-01-01',
 ) {
-  return { uri, name, explicit, artists };
+  return { uri, name, explicit, artists, album: { release_date: releaseDate } };
 }
 
 function invoke(): Promise<void> {
@@ -380,6 +381,81 @@ describe('handler – remaster filtering', () => {
       expect(mockSpotify.addTracksToPlaylist).not.toHaveBeenCalled();
       expect(mockMapper.put).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('handler – age filtering', () => {
+  it('skips a song released more than 4 years ago', async () => {
+    setupMapper({ songAlreadyExists: false });
+    mockAxiosGet.mockResolvedValue({
+      status: 200,
+      data: siriusXMSongResponse('Old Artist', 'Old Song', 'Old Album'),
+    });
+    const oldTrack = makeSpotifyTrack('spotify:track:old', 'Old Song', false, [{ name: 'Old Artist' }], '2020-01-01');
+    mockSpotify.searchTracks.mockResolvedValue({
+      statusCode: 200,
+      body: { tracks: { items: [oldTrack] } },
+    });
+
+    await invoke();
+
+    expect(mockSpotify.addTracksToPlaylist).not.toHaveBeenCalled();
+    expect(mockMapper.put).not.toHaveBeenCalled();
+  });
+
+  it('adds a song released exactly 4 years ago', async () => {
+    setupMapper({ songAlreadyExists: false });
+    mockAxiosGet.mockResolvedValue({
+      status: 200,
+      data: siriusXMSongResponse('Artist', 'Song', 'Album'),
+    });
+    const currentYear = new Date().getFullYear();
+    const track = makeSpotifyTrack('spotify:track:four', 'Song', false, [{ name: 'Artist' }], `${currentYear - 4}-01-01`);
+    mockSpotify.searchTracks.mockResolvedValue({
+      statusCode: 200,
+      body: { tracks: { items: [track] } },
+    });
+
+    await invoke();
+
+    expect(mockSpotify.addTracksToPlaylist).toHaveBeenCalledWith('test-playlist-id', ['spotify:track:four']);
+    expect(mockMapper.put).toHaveBeenCalledTimes(1);
+  });
+
+  it('adds a song released within the last 4 years', async () => {
+    setupMapper({ songAlreadyExists: false });
+    mockAxiosGet.mockResolvedValue({
+      status: 200,
+      data: siriusXMSongResponse('Artist', 'Song', 'Album'),
+    });
+    const track = makeSpotifyTrack('spotify:track:recent', 'Song', false, [{ name: 'Artist' }], '2024-06-01');
+    mockSpotify.searchTracks.mockResolvedValue({
+      statusCode: 200,
+      body: { tracks: { items: [track] } },
+    });
+
+    await invoke();
+
+    expect(mockSpotify.addTracksToPlaylist).toHaveBeenCalledWith('test-playlist-id', ['spotify:track:recent']);
+    expect(mockMapper.put).toHaveBeenCalledTimes(1);
+  });
+
+  it('adds a song when Spotify track has no release date', async () => {
+    setupMapper({ songAlreadyExists: false });
+    mockAxiosGet.mockResolvedValue({
+      status: 200,
+      data: siriusXMSongResponse('Artist', 'Song', 'Album'),
+    });
+    const track = { uri: 'spotify:track:nodatetrack', name: 'Song', explicit: false, artists: [{ name: 'Artist' }] };
+    mockSpotify.searchTracks.mockResolvedValue({
+      statusCode: 200,
+      body: { tracks: { items: [track] } },
+    });
+
+    await invoke();
+
+    expect(mockSpotify.addTracksToPlaylist).toHaveBeenCalledWith('test-playlist-id', ['spotify:track:nodatetrack']);
+    expect(mockMapper.put).toHaveBeenCalledTimes(1);
   });
 });
 

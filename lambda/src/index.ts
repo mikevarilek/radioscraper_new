@@ -121,16 +121,26 @@ export const handler: ScheduledHandler = async () => {
                                 index = 1;
                         }
                     }
-                    console.info("Attempting to add song to playlist. Song URI: " + data.tracks.items[index].uri);
-                    await spotifyApi.addTracksToPlaylist(Secrets.SPOTIFY_PLAYLIST_ID, [data.tracks.items[index].uri]).then(async function (response: any) {
-                        console.info("Successfully added to Playlist");
-                        await mapper.put(song);
-                    },
-                    function (reason: string | undefined) {
-                        console.error("Spotify addTracksToPlaylist failed.");
-                        console.error(reason);
-                        throw new Error(reason);
-                    });                        
+                    const selectedTrack = data.tracks.items[index];
+                    const releaseYear = parseInt(selectedTrack?.album?.release_date?.substring(0, 4), 10);
+                    const currentYear = new Date().getFullYear();
+                    const tooOld = !isNaN(releaseYear) && (currentYear - releaseYear) > 4;
+                    if (tooOld) {
+                        console.info(`Skipping song from ${releaseYear} (more than 4 years old): ${song.artist} - ${song.title}`);
+                    } else {
+                        console.info("Attempting to add song to playlist. Song URI: " + selectedTrack.uri);
+                        await spotifyApi.addTracksToPlaylist(Secrets.SPOTIFY_PLAYLIST_ID, [selectedTrack.uri]).then(
+                            async function (response: any) {
+                                console.info("Successfully added to Playlist");
+                                await mapper.put(song);
+                            },
+                            function (reason: string | undefined) {
+                                console.error("Spotify addTracksToPlaylist failed.");
+                                console.error(reason);
+                                throw new Error(reason);
+                            }
+                        );
+                    }
                 } else {
                     console.error("Spotify searchTracks no results.");
                     console.error(JSON.stringify(data));
