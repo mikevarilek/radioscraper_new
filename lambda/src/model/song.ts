@@ -12,6 +12,8 @@ export class Song {
     title: string;
     @attribute({ type: "String" })
     album?: string;
+    @attribute({ type: "String" })
+    updatedAt?: string;
 
     toSearchString(): string {
       var artist = this.artist;

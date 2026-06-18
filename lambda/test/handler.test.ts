@@ -384,6 +384,51 @@ describe('handler – remaster filtering', () => {
   });
 });
 
+describe('handler – album title filtering', () => {
+  const filteredAlbums = [
+    'Greatest Hits (Remaster)',
+    'The Album - Remastered Edition',
+    'Songs [REMASTER]',
+    '30th Anniversary Edition',
+    'Deluxe Anniversary Collection',
+    'Best Of (anniversary reissue)',
+  ];
+
+  filteredAlbums.forEach(album => {
+    it(`never calls Spotify or DDB put for album "${album}"`, async () => {
+      setupMapper({ songAlreadyExists: true });
+      mockAxiosGet.mockResolvedValue({
+        status: 200,
+        data: siriusXMSongResponse('Some Artist', 'Some Song', album),
+      });
+
+      await invoke();
+
+      expect(mockSpotify.searchTracks).not.toHaveBeenCalled();
+      expect(mockSpotify.addTracksToPlaylist).not.toHaveBeenCalled();
+      expect(mockMapper.put).not.toHaveBeenCalled();
+    });
+  });
+
+  it('does not filter a normal album title', async () => {
+    setupMapper({ songAlreadyExists: false });
+    mockAxiosGet.mockResolvedValue({
+      status: 200,
+      data: siriusXMSongResponse('Artist', 'Song', 'Normal Album Title'),
+    });
+    const track = makeSpotifyTrack('spotify:track:normal', 'Song', false, [{ name: 'Artist' }]);
+    mockSpotify.searchTracks.mockResolvedValue({
+      statusCode: 200,
+      body: { tracks: { items: [track] } },
+    });
+
+    await invoke();
+
+    expect(mockSpotify.addTracksToPlaylist).toHaveBeenCalledWith('test-playlist-id', ['spotify:track:normal']);
+    expect(mockMapper.put).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('handler – age filtering', () => {
   it('skips a song released more than 4 years ago', async () => {
     setupMapper({ songAlreadyExists: false });

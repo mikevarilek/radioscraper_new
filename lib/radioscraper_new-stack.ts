@@ -4,6 +4,8 @@ import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as ddb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as path from 'path';
@@ -19,15 +21,26 @@ export class RadioscraperNewStack extends cdk.Stack {
       billingMode: ddb.BillingMode.PAY_PER_REQUEST,
     });
 
+    const tokenAlertTopic = new sns.Topic(this, 'SpotifyTokenAlertTopic', {
+      topicName: 'RadioscraperNew-SpotifyTokenAlert',
+      displayName: 'RadioscraperNew Spotify Token Alerts',
+    });
+
+    const alertEmail = this.node.tryGetContext('alertEmail') as string | undefined;
+    if (alertEmail) {
+      tokenAlertTopic.addSubscription(new subscriptions.EmailSubscription(alertEmail));
+    }
+
     const scrapeFunction = new NodejsFunction(this, 'scrapeAltNation', {
       memorySize: 256,
-      timeout: cdk.Duration.seconds(5),
+      timeout: cdk.Duration.seconds(10),
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'handler',
       entry: path.join(__dirname, `/../lambda/src/index.ts`),
       functionName: "RadioscraperNew-scrapeAltNation",
       environment: {
         AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
+        SNS_TOPIC_ARN: tokenAlertTopic.topicArn,
       },
     });
 
@@ -53,6 +66,8 @@ export class RadioscraperNewStack extends cdk.Stack {
         statements: [readWriteSongsTablePolicy],
       }),
     );
+
+    tokenAlertTopic.grantPublish(scrapeFunction);
 
     // suppress unused variable warning — table is created for its side effect
     void table;

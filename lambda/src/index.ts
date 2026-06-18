@@ -1,9 +1,22 @@
 import { ScheduledHandler } from 'aws-lambda'
 import { Axios } from 'axios'
+import * as AWS from 'aws-sdk'
 import { mapper } from './ddb'
 import { Song } from './model/song'
 import { Secrets } from './secrets'
 var SpotifyWebApi = require('spotify-web-api-node')
+
+async function notifyTokenAlert(subject: string, message: string): Promise<void> {
+    const topicArn = process.env.SNS_TOPIC_ARN;
+    if (!topicArn) return;
+    try {
+        const sns = new AWS.SNS();
+        await sns.publish({ TopicArn: topicArn, Subject: subject, Message: message }).promise();
+        console.info(`SNS alert sent: ${subject}`);
+    } catch (err) {
+        console.error('Failed to send SNS alert:', err);
+    }
+}
 
 export const handler: ScheduledHandler = async () => {
 
@@ -62,13 +75,31 @@ export const handler: ScheduledHandler = async () => {
             const newRefreshToken = data.body['refresh_token'];
             if (newRefreshToken && newRefreshToken !== refresh_token.album) {
                 refresh_token.album = newRefreshToken;
+                refresh_token.updatedAt = new Date().toISOString();
                 spotifyApi.setRefreshToken(newRefreshToken);
                 await mapper.put(refresh_token);
                 console.info("Spotify refresh token rotated — updated in DDB");
             }
+
+            if (refresh_token.updatedAt) {
+                const msPerMonth = 1000 * 60 * 60 * 24 * 30.44;
+                const monthsOld = (Date.now() - new Date(refresh_token.updatedAt).getTime()) / msPerMonth;
+                if (monthsOld > 5) {
+                    const remaining = (6 - monthsOld).toFixed(1);
+                    console.warn(`Spotify refresh token is ${monthsOld.toFixed(1)} months old — expiry in ~${remaining} months`);
+                    await notifyTokenAlert(
+                        'Spotify Refresh Token Expiring Soon',
+                        `The Spotify refresh token for RadioscraperNew was last rotated ${monthsOld.toFixed(1)} months ago.\n\nIt may expire in approximately ${remaining} month(s). Please re-authorize the app to issue a fresh token.`
+                    );
+                }
+            }
         },
-        function(err: string | undefined) {
-            console.error(err);
+        async function(err: string | undefined) {
+            console.error("Spotify refreshAccessToken failed:", err);
+            await notifyTokenAlert(
+                'Spotify Refresh Token Expired',
+                `The Spotify refresh token for RadioscraperNew has expired or been revoked. The Lambda will stop adding songs until the token is renewed.\n\nError: ${err}`
+            );
             throw new Error(err);
         }
     )
@@ -85,8 +116,14 @@ export const handler: ScheduledHandler = async () => {
         song.title = response.channels.altnation.content.title;
         song.album = response.channels.altnation.content.album.title;
 
-        if (song.title.toLowerCase().includes('remaster')) {
-            console.info("Skipping remaster: " + song.title);
+        const titleLower = song.title.toLowerCase();
+        const albumLower = (song.album ?? '').toLowerCase();
+        if (titleLower.includes('remaster')) {
+            console.info("Skipping remaster title: " + song.title);
+            return;
+        }
+        if (albumLower.includes('remaster') || albumLower.includes('anniversary')) {
+            console.info(`Skipping remaster/anniversary album: ${song.album} — ${song.artist} - ${song.title}`);
             return;
         }
 
