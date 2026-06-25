@@ -23,7 +23,7 @@ export const handler: ScheduledHandler = async () => {
     var spotifyApi = new SpotifyWebApi({
         clientId: Secrets.SPOTIFY_CLIENT_ID,
         clientSecret: Secrets.SPOTIFY_API_KEY,
-        redirectUri: 'http://localhost:3000/',
+        redirectUri: 'https://google.com/',
     });
 
     // Likely unnecessary, remove later
